@@ -1,3 +1,8 @@
+/*
+ * TODO:
+ * - remove x30 prolog/epilog from leaf functions
+ */
+
 	.global	_start
 
 	.equiv	NULL, 0
