@@ -1,4 +1,4 @@
-	.global	main
+	.global	_start
 
 	.equiv	NULL, 0
 
@@ -36,6 +36,8 @@
 	.equiv	SYM_EMPTY, ' '
 
 	.equiv	SVC_WRITE, 64 // write() syscall
+
+	.equiv	RENDER_DELAY, 100
 
 	.text
 
@@ -753,25 +755,40 @@ draw_canvas_loop:
 add_render_delay:
 	sub	sp, sp, 16
 	str	x30, [sp]
-	adr	x0, render_delay
-	ldr	x0, [x0]
-	bl	usleep
+	mov	w0, RENDER_DELAY
+	mov	w1, 0
+add_render_delay_loop:
+	add	w1, w1, 1
+	cmp	w1, w0
+	b.lt	add_render_delay_loop
 	ldr	x30, [sp]
 	add	sp, sp, 16
 	ret
 
-main:
+_start:
+	.set	PROT_READ, 1
+	.set	PROT_WRITE, 2
+	.set	MAP_PRIVATE, 2
+	.set	MAP_ANONYMOUS, 32
+	.set	SVC_MMAP, 222
 	sub	sp, sp, 16
 	str	x30, [sp]
 	mov	w0, SIZEOF_PARTICLE
 	mov	w1, NUM_PARTICLES
-	mul	w0, w0, w0
-	bl	malloc
+	mul	w1, w0, w1
+	mov	x0, NULL
+	mov	w2, PROT_READ
+	orr	w2, w2, PROT_WRITE
+	mov	w3, MAP_PRIVATE
+	mov	w4, MAP_ANONYMOUS
+	orr	w3, w3, w4
+	mov	w8, SVC_MMAP
+	svc	0
 	cmp	x0, NULL
-	b.eq	main_out
+	b.eq	_start_out
 	adr	x1, particles
 	str	x0, [x1]
-main_loop:
+_start_loop:
 	bl	emit_next_particle
 	adr	x0, particle_collision_cb
 	bl	apply_particles_all
@@ -789,20 +806,14 @@ main_loop:
 	bl	draw_canvas
 	bl	sim_is_running
 	cmp	w0, TRUE
-	b.eq	main_loop
-main_out:
-	adr	x0, particles
-	ldr	x0, [x0]
-	bl	free
+	b.eq	_start_loop
+_start_out: // don't bother unmapping `particles`
 	mov	w0, 0
 	ldr	x30, [sp]
 	add	sp, sp, 16
 	ret
 
 	.data
-
-render_delay: // slow down rendering
-	.4byte 10000
 
 simulation_time:
 	.float	0.0
@@ -841,7 +852,6 @@ rolling_attenuation:
  * Particle system. Each particle consists of a pair of coordinates and
  * velocity, respectively: (x, y, vx, vy, life, active)
  */
-	.align	16
 particles:
 	.quad	NULL
 num_particles:
