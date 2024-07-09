@@ -35,6 +35,8 @@
 	.equiv	SYM_PARTICLE, 'O'
 	.equiv	SYM_EMPTY, ' '
 
+	.equiv	SVC_WRITE, 64 // write() syscall
+
 	.text
 
 // Calls a CB for each particle.
@@ -442,7 +444,6 @@ particle_life_cb:
 	mov	w1, TRUE
 	mov	w2, FALSE
 	csel	w1, w1, w2, GE
-roffel:
 	str	w1, [x0, 20]
 	ldr	s30, [sp]
 	add	sp, sp, 16
@@ -572,8 +573,11 @@ sim_is_running_out:
 clear_screen:
         sub     sp, sp, 16
         str     x30, [sp]
-        ldr     x0, =clrscrn
-        bl      printf
+	mov	x0, 0
+        ldr     x1, =clrscrn
+	mov	x2, 2 // length
+	mov	x8, 64
+	svc	0
         ldr     x30, [sp]
         add     sp, sp, 16
         ret
@@ -630,24 +634,27 @@ is_particle_present_out:
 
 // void printnchar(char ch, int count)
 printnchar:
-        sub     sp, sp, 32
+        sub     sp, sp, 48
         str     x30, [sp]
         stp     x19, x20, [sp, 8]
         str     x21, [sp, 24]
-        mov     w19, w0
+        add     x19, sp, 32
+	str	w0, [x19]
         mov     w20, w1
         mov     w21, 0
 printnchar_loop:
-        ldr     x0, =char_fmt
-        mov     w1, w19
-        bl      printf
+	mov	w0, 0
+        mov     x1, x19
+	mov	x2, 1
+	mov	x8, 64
+        svc	0
         add     w21, w21, 1
         cmp     w21, w20
         b.lt    printnchar_loop
         ldr     x21, [sp, 24]
         ldp     x19, x20, [sp, 8]
         ldr     x30, [sp]
-        add     sp, sp, 32
+        add     sp, sp, 48
         ret
 
 // void draw_canvas_row(int row)
@@ -655,11 +662,10 @@ draw_canvas_row:
 	sub	sp, sp, 48
 	str	x30, [sp]
 	stp	x19, x20, [sp, 8]
-	stp	x21, x21, [sp, 24]
+	str	x21, [sp, 24]
 	mov	w21, w0
 	mov	w19, CANVAS_WIDTH
 	mov	w20, 0
-	ldr	x22, =char_fmt
 draw_canvas_row_loop:
 	mov	w0, w21
 	mov	w1, w20
@@ -668,12 +674,16 @@ draw_canvas_row_loop:
 	mov	w0, SYM_PARTICLE
 	mov	w1, SYM_EMPTY
 	csel	w1, w0, w1, EQ
-	mov	x0, x22
-	bl	printf
+	str	w1, [sp, 32]
+	mov	w0, 0
+	add	x1, sp, 32
+	mov	w2, 1 // length
+	mov	w8, 64
+	svc	0
 	add	w20, w20, 1
 	cmp	w20, w19
 	b.lt	draw_canvas_row_loop
-	ldp	x21, x22, [sp, 24]
+	ldr	x21, [sp, 24]
 	ldp	x19, x20, [sp, 8]
 	ldr	x30, [sp]
 	add	sp, sp, 48
@@ -695,8 +705,11 @@ draw_canvas:
 	mov	w0, SYM_CORNER
 	mov	w1, 1
 	bl	printnchar
-	ldr	x0, =newline
-	bl	printf
+	mov	w0, 0
+	ldr	x1, =newline
+	mov	w2, 1 // length
+	mov	w8, 64
+	svc	0
 draw_canvas_loop:
 	mov	w0, SYM_VERT
 	mov	w1, 1
@@ -706,8 +719,11 @@ draw_canvas_loop:
 	mov	w0, SYM_VERT
 	mov	w1, 1
 	bl	printnchar
-	ldr	x0, =newline
-	bl	printf
+	mov	w0, 0
+	ldr	x1, =newline
+	mov	w2, 1 // length
+	mov	w8, 64
+	svc	0
 	add	w20, w20, 1
 	cmp	w20, w19
 	b.lt	draw_canvas_loop
@@ -720,8 +736,11 @@ draw_canvas_loop:
 	mov	w0, SYM_CORNER
 	mov	w1, 1
 	bl	printnchar
-	ldr	x0, =newline
-	bl	printf
+	mov	w0, 0
+	ldr	x1, =newline
+	mov	w2, 1 // length
+	mov	w8, 64
+	svc	0
 	ldp	x19, x20, [sp, 8]
 	ldr	x30, [sp]
 	add	sp, sp, 32
@@ -828,8 +847,6 @@ particles:
 num_particles:
 	.4byte	0
 
-char_fmt:
-	.asciz	"%c"
 newline:
 	.asciz	"\n"
 clrscrn:
