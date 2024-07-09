@@ -37,7 +37,7 @@
 
 	.equiv	SVC_WRITE, 64 // write() syscall
 
-	.equiv	RENDER_DELAY, 100
+	.equiv	RENDER_DELAY, 1000
 
 	.text
 
@@ -433,7 +433,8 @@ particle_rolling_cb_out:
 	add	sp, sp, 16
 	ret
 
-// Ticks down the life of a particle and sets it to inactive if a threshold is reached.
+// Ticks down the life of a particle and sets it to inactive if a threshold is
+// reached.
 // 
 // void particle_life_cb(void *particle, float clock_tick)
 particle_life_cb:
@@ -471,6 +472,17 @@ emit_single_particle:
 	str	w0, [x0, 20]
 	add	w2, w2, 1
 	str	w2, [x1]
+/*
+ * We reduce the render delay to offset the extra computation power needed for
+ * each additional particle.
+ */
+	adr	x0, render_delay
+	ldr	w1, [x0]
+	sub	w1, w1, 1
+	mov	w2, 0
+	cmp	w1, w2
+	csel	w1, w1, w2, GT
+	str	w1, [x0]
 	ldr	x30, [sp]
 	add	sp, sp, 16
 	ret
@@ -755,9 +767,17 @@ draw_canvas_loop:
 add_render_delay:
 	sub	sp, sp, 16
 	str	x30, [sp]
-	mov	w0, RENDER_DELAY
+/*
+ * We square the render delay since it decrements with each emitted particle.
+ * Doing so allows us to (crudely) approximate the increased computation power
+ * needed with each new particle.
+ */
+	adr	x0, render_delay
+	ldr	w0, [x0]
+	mul	w0, w0, w0
 	mov	w1, 0
 add_render_delay_loop:
+	isb
 	add	w1, w1, 1
 	cmp	w1, w0
 	b.lt	add_render_delay_loop
@@ -856,6 +876,9 @@ particles:
 	.quad	NULL
 num_particles:
 	.4byte	0
+
+render_delay:
+	.4byte	RENDER_DELAY
 
 newline:
 	.asciz	"\n"
