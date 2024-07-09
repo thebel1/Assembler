@@ -576,7 +576,7 @@ clear_screen:
 	mov	x0, 0
         ldr     x1, =clrscrn
 	mov	x2, 2 // length
-	mov	x8, 64
+	mov	x8, SVC_WRITE
 	svc	0
         ldr     x30, [sp]
         add     sp, sp, 16
@@ -646,7 +646,7 @@ printnchar_loop:
 	mov	w0, 0
         mov     x1, x19
 	mov	x2, 1
-	mov	x8, 64
+	mov	x8, SVC_WRITE
         svc	0
         add     w21, w21, 1
         cmp     w21, w20
@@ -678,7 +678,7 @@ draw_canvas_row_loop:
 	mov	w0, 0
 	add	x1, sp, 32
 	mov	w2, 1 // length
-	mov	w8, 64
+	mov	w8, SVC_WRITE
 	svc	0
 	add	w20, w20, 1
 	cmp	w20, w19
@@ -708,7 +708,7 @@ draw_canvas:
 	mov	w0, 0
 	ldr	x1, =newline
 	mov	w2, 1 // length
-	mov	w8, 64
+	mov	w8, SVC_WRITE
 	svc	0
 draw_canvas_loop:
 	mov	w0, SYM_VERT
@@ -722,7 +722,7 @@ draw_canvas_loop:
 	mov	w0, 0
 	ldr	x1, =newline
 	mov	w2, 1 // length
-	mov	w8, 64
+	mov	w8, SVC_WRITE
 	svc	0
 	add	w20, w20, 1
 	cmp	w20, w19
@@ -739,7 +739,7 @@ draw_canvas_loop:
 	mov	w0, 0
 	ldr	x1, =newline
 	mov	w2, 1 // length
-	mov	w8, 64
+	mov	w8, SVC_WRITE
 	svc	0
 	ldp	x19, x20, [sp, 8]
 	ldr	x30, [sp]
